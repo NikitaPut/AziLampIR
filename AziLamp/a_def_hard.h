@@ -635,22 +635,10 @@
 
 #include "core_version.h"
 
-#if defined(ESP8266)
-  #include <ESP8266WiFi.h>
-  #include <ESP8266mDNS.h>
-#endif
-
-#if defined(ESP32)
-  #include <WiFi.h>
-  #include <ESPmDNS.h>
-#endif
-
                                  // Начиная с версии 3.9.2 FastLED допускает оверклокинг - повышенную частоту вывода сигнала в линию
                                  // Если диодов много - можно попробовать увеличить частоту вывода на ленту, установив некоторое значение оверклокинга
 #define FASTLED_OVERCLOCK 1.0    // 1.2 -> 20% overclock ~ 960 khz.
 #include <FastLED.h>             // Установите в менеджере библиотек стандартную библиотеку FastLED
-
-#include <ESPAsyncWebServer.h>   // Библиотека асинхронного Web-сервера
 
 #if (USE_OTA == 1)
   #include <ArduinoOTA.h>        // Библиотека обновления "по воздуху"
