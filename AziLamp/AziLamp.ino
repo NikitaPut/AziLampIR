@@ -197,50 +197,6 @@ void process() {
     rescanTextEvents();
   }
 
-  if (wifi_connected) {
-
-    #if (USE_WEATHER == 1)  
-      if (useWeather > 0) {   
-        // Если настройки программы предполагают получение сведений о текущей погоде - выполнить обновление данных с погодного сервера
-        if ((weather_t > 0) && getWeatherInProgress && (millis() - weather_t > 5000)) {
-          DEBUGLN(F("Таймаут запроса погоды!"));
-          getWeatherInProgress = false;
-          weather_cnt++;
-          refresh_weather = true; weather_t = 0;
-          if (init_weather && weather_cnt >= TRY_GET_WEATHER_CNT) {
-            DEBUGLN(F("Не удалось установить соединение с сервером погоды."));  
-            refresh_weather = false;
-            
-            doc.clear();
-            doc["act"]    = String(sWEATHER);
-            doc["region"] = useWeather == 1 ? regionID : regionID2;
-            doc["result"] = String(sTIMEOUT);
-
-            String out;              
-            serializeJson(doc, out);      
-            doc.clear();
-            
-          }
-        }
-        
-        bool timeToGetWeather = weatherTimer.isReady(); 
-        if (timeToGetWeather) { weather_cnt = 0; weather_t = 0; refresh_weather = true; }
-        // weather_t - время последней отправки запроса. Запрашивать погоду если weather_t обнулено или если последний (неудачный) запрос произошел не менее чем минуту назад
-        // иначе слишком частые запросы нарушают коммуникацию с приложением - устройство все время блокирующе запрашивает данные с сервера погоды
-        if (timeToGetWeather || (refresh_weather && (weather_t == 0 || (millis() - weather_t > 60000)) && weather_cnt < TRY_GET_WEATHER_CNT)) {
-          weather_t = millis();
-          getWeatherInProgress = true;
-          getWeather();
-          if (weather_cnt >= TRY_GET_WEATHER_CNT) {
-            if (!init_weather) {
-              // Если погода еще не была инициализирована - следующий запрос брать по меньшему из 5 минут или SYNC_WEATHER_PERIOD
-              weatherTimer.setInterval(1000 * 60 * min((uint16_t)5, SYNC_WEATHER_PERIOD));
-            }
-          }        
-        }            
-      }
-    #endif
-  } 
 
   #if (USE_WEATHER == 1)  
     // Если погода не смогла обновиться за TRY_GET_WEATHER_CNT попыток за период обновления погоды + 30сек "запаса" - считать погоду неинициализированной и не отображать погоду в часах
@@ -251,9 +207,6 @@ void process() {
   #endif
 
   // Проверить необходимость отправки сообщения об изменении состояния клиенту Web
-  if (changed_keys.length() > 1) {
-    SendCurrentState(changed_keys);
-    changed_keys.clear();
   }
       
   bool needProcessEffect = true;
@@ -656,15 +609,6 @@ void process() {
           clicks_printed = false;
           return;
         }
-
-        // Четырехкратное нажатие - показать текущий IP WiFi-соединения            
-        else if (clicks == 4) {
-          DEBUGLN(F("Кнопка: IP-адрес"));
-          showCurrentIP();
-          clicks = 0;
-          clicks_printed = false;
-          return;
-        }      
 
         // Пятикратное нажатие - показать версию прошивки
         else if (clicks == 5) {
@@ -1403,24 +1347,6 @@ void parsing() {
             set_ntpServerName(str);
             break;
 
-          case 2:
-            set_Ssid(str);
-            break;
-
-          case 3:
-            set_pass(str);
-            break;
-
-          case 4:
-            set_SoftAPName(str);
-            break;
-
-          case 5:
-            set_SoftAPPass(str);
-            // Передается в одном пакете - использовать SoftAP, имя точки и пароль
-            // После получения пароля - перезапустить создание точки доступа
-            if (useSoftAP) startSoftAP();
-            break;
             
           case 6:
             // Настройки будильника в формате $6 6|DD EF WD AD HH1 MM1 HH2 MM2 HH3 MM3 HH4 MM4 HH5 MM5 HH6 MM6 HH7 MM7
@@ -2384,67 +2310,6 @@ void parsing() {
           break;
       }
       break;
-
-    // ----------------------------------------------------
-    // 21 - настройки подключения к сети / точке доступа
-    //   $21 0 0; - не использовать точку доступа $21 0 1; - использовать точку доступа
-    //   $21 1 IP1 IP2 IP3 IP4; - установить статический IP адрес подключения к локальной WiFi сети, пример: $21 1 192 168 0 106;
-    //   $21 2; Выполнить переподключение к сети WiFi
-    //   $21 3 X; - Использовать DHCP X=0|1
-    // ----------------------------------------------------
-
-    case 21:
-      // Настройки подключения к сети
-      switch (intData[1]) { 
-        // $21 0 0 - не использовать точку доступа $21 0 1 - использовать точку доступа
-        case 0:  
-          set_useSoftAP(intData[2] == 1);
-          if (useSoftAP && !ap_connected) 
-            startSoftAP();
-          else if (!useSoftAP && ap_connected) {
-            if (wifi_connected) { 
-              ap_connected = false;              
-              WiFi.softAPdisconnect(true);
-              DEBUGLN(F("Точка доступа отключена."));
-            }
-          }      
-          break;
-        case 1:  
-          // $21 1 IP1 IP2 IP3 IP4 - установить статический IP адрес подключения к локальной WiFi сети, пример: $21 1 192 168 0 106
-          // Локальная сеть - 10.х.х.х или 172.16.х.х - 172.31.х.х или 192.168.х.х
-          // Если задан адрес не локальной сети - сбросить его в 0.0.0.0, что означает получение динамического адреса 
-          if (!(intData[2] == 10 || (intData[2] == 172 && intData[3] >= 16 && intData[3] <= 31) || (intData[2] == 192 && intData[3] == 168))) {
-            set_StaticIP(0, 0, 0, 0);
-          }
-          set_StaticIP(intData[2], intData[3], intData[4], intData[5]);
-          break;
-        case 2:  
-          // $21 2; Выполнить переподключение к сети WiFi
-          saveSettings();
-          delay(10);
-          FastLED.clear();
-          startWiFi(30000);     // Время ожидания подключения 30 сек
-          showCurrentIP();
-          break;
-        case 3:
-          // $21 3 X; - Использовать DHCP X=0|1
-          set_useDHCP(intData[2] != 0);
-          break;
-        default:
-          err = true;
-          notifyUnknownCommand(incomeBuffer);
-          break;
-      }
-      break;
-
-    // ----------------------------------------------------
-    // 22 - настройки включения режимов матрицы в указанное время NN5 - Действие на "Рассвет", NN6 - действие на "Закат"
-    // - $22 HH1 MM1 NN1 HH2 MM2 NN2 HH3 MM3 NN3 HH4 MM4 NN4 NN5 NN6;
-    //     HHn - час срабатывания
-    //     MMn - минуты срабатывания
-    //     NNn - эффект: -3 - выключено; -2 - выключить матрицу; -1 - ночные часы; 0 - случайный режим и далее по кругу; 1 и далее - список режимов EFFECT_LIST 
-    // ----------------------------------------------------
-
     case 22:
       set_AM1_hour(intData[1]);
       set_AM1_minute(intData[2]);
@@ -4136,104 +4001,6 @@ String getStateValue(const String& key, int8_t effect, bool shrt) {
     return str;
   }
 
-  // создавать точку доступа
-  if (key == "AU") {
-    if (shrt) {
-      return String(useSoftAP);  
-    }
-    String str("AU:");
-    str += useSoftAP;
-    return str;
-  }
-
-  // Имя точки доступа
-  if (key == "AN") {
-    String tmp(getSoftAPName());
-    if (shrt) {
-      return tmp;
-    }
-    String str("AN:");
-    str += tmp;
-    return str;
-  }
-
-  // Пароль точки доступа - Web-канал
-  if (key == "AB") {
-    String tmp(getSoftAPPass());
-    if (shrt) {
-      return tmp;
-    }
-    String str("AB:");
-    str += tmp;
-    return str;
-  }
-
-  // Имя локальной сети (SSID)
-  if (key == "NW") {
-    String tmp(getSsid());
-    if (shrt) {
-      return tmp;
-    }
-    String str("NW:");
-    str += tmp;
-    return str;
-  }
-
-  // Пароль к сети - Web канал
-  if (key == "NX") {
-    String tmp(getPass());
-    if (shrt) {
-      return tmp;
-    }
-    String str("NX:");
-    str += tmp;
-    return str;
-  }
-
-  // IP адрес - настройки
-  if (key == "IP") {
-    String tmp;
-
-    if (IP_STA[0] + IP_STA[1] + IP_STA[2] + IP_STA[3] > 0) {
-      tmp  = String(IP_STA[0]);   tmp += ".";
-      tmp += IP_STA[1];           tmp += ".";
-      tmp += IP_STA[2];           tmp += ".";
-      tmp += IP_STA[3];
-    } else {
-      tmp = String(wifi_connected ? WiFi.localIP().toString() : "");
-    }
-    
-    if (shrt) {
-      return tmp;
-    }
-
-    String str("IP:");
-    str += tmp;
-    return str;
-  }
-
-  // IP адрес - текущий
-  if (key == "IPC") {
-    String tmp(wifi_connected ? WiFi.localIP().toString() : "");    
-    if (shrt) {
-      return tmp;
-    }
-    String str("IPC:");
-    str += tmp;
-    return str;
-  }
-
-  // Использовать DHCP
-  if (key == "DH") {
-    bool useDHCP = getUseDHCP();
-    if (shrt) {
-      return String(useDHCP);  
-    }
-    String str("DH:");
-    str += useDHCP;
-    return str;
-  }
-
   // Время Режима №1
   if (key == "AM1T") {
     String tmp(padNum(AM1_hour,2)); tmp += ' '; tmp += padNum(AM1_minute, 2);
@@ -5227,9 +4994,6 @@ void resetModes() {
   set_isNightClock(false);  // setter
   set_CurrentSpecialMode(-1);
   loadingFlag = false;
-  wifi_print_ip = false;
-  wifi_print_ip_text = false;
-  wifi_print_version = false;
   #if (USE_SD == 1)  
     play_file_finished = false;
   #endif
@@ -5289,21 +5053,6 @@ void setEffect(uint8_t eff) {
   }
 }
 
-void showCurrentIP() {
-  saveSpecialMode = specialMode;
-  saveSpecialModeId = specialModeId;
-  saveMode = thisMode;
-  setEffect(MC_TEXT);
-  textHasMultiColor = false;
-  wifi_print_version = false;
-  wifi_print_ip = wifi_connected;  
-  wifi_print_ip_text = true;
-  wifi_print_idx = 0; 
-  wifi_current_ip = wifi_connected ? WiFi.localIP().toString() : F("Нет подключения к сети WiFi");
-  loadingTextFlag = true;
-  fullTextFlag = false;
-}
-
 void showCurrentVersion() {
   saveSpecialMode = specialMode;
   saveSpecialModeId = specialModeId;
@@ -5311,8 +5060,6 @@ void showCurrentVersion() {
   setEffect(MC_TEXT);
   textHasMultiColor = false;
   wifi_print_version = true;
-  wifi_print_ip = false;  
-  wifi_print_ip_text = false;
   loadingTextFlag = true;
   fullTextFlag = false;
 }

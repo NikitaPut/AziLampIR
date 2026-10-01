@@ -1,3 +1,13 @@
+// Защита от ошибки сборки: если выбран MATRIX_INDEX == 0 (карта в скетче), но для
+// заданных WIDTH/HEIGHT карты нет (например MATRIX_TYPE != 2 и карта не используется),
+// заглушка позволяет компилироваться. Реальная карта индексов нужна только при MATRIX_TYPE == 2.
+#ifndef INDEX_MAP_OK
+#if !(MATRIX_TYPE == 2)
+#define INDEX_MAP_OK
+bool loadIndexMap() { return false; }
+#endif
+#endif
+
 #if (MATRIX_INDEX == 0)
 
 // Примеры карты индексов для матриц размером 16x16, 32x8 и составной 48x16 (из 16x16, 32x8, 32x8)
