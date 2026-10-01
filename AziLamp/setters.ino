@@ -5,15 +5,10 @@
 
 #include "timeProcessor.h"
 
-// Добавление ключа в список изменившихся параметров, чьи новые значения необходимо отправить на сервер
+// Пустая заглушка: отправка изменений состояния в веб-интерфейс удалена из проекта.
+// Вызовы оставлены в сеттерах, чтобы не переписывать их все; ничего не делают.
 void addKeyToChanged(const String& key) {
-  String search('|'); search += key; search += '|';
-  // Если ключа еще нет в строке измененных параметров - добавить 
-  if (changed_keys.length() == 0) changed_keys = search; else 
-  if (changed_keys.indexOf(search) < 0) {
-    changed_keys += key;
-    changed_keys += '|';
-  }
+  (void)key;
 }
 
 // PS isTurnedOff

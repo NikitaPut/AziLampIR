@@ -1981,7 +1981,6 @@ void checkAlarmTime() {
         serializeJson(doc, out);
         doc.clear();
 
-        SendWeb(out, TOPIC_ALM);
       }
     }
 
@@ -2018,7 +2017,6 @@ void checkAlarmTime() {
       serializeJson(doc, out);
       doc.clear();
 
-      SendWeb(out, TOPIC_ALM);
     }
 
     yield();
@@ -2084,7 +2082,6 @@ void checkAlarmTime() {
     serializeJson(doc, out);
     doc.clear();
 
-    SendWeb(out, TOPIC_ALM);
   }
 
   yield();
@@ -2179,7 +2176,6 @@ void stopAlarm() {
     }
 #endif
 
-    SendWeb(out, TOPIC_ALM);
   }
 }
 
@@ -2511,7 +2507,6 @@ void SetAutoMode(uint8_t amode) {
     serializeJson(doc, out);
     doc.clear();
 
-    SendWeb(out, TOPIC_AMD);
   }
 }
 

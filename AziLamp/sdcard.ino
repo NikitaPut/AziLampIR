@@ -390,7 +390,6 @@ void sdcardRoutine() {
     serializeJson(doc, out);
     doc.clear();
 
-    SendWeb(out, TOPIC_SDC);
 
     FastLED.clear();
   }

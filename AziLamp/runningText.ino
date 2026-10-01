@@ -3129,7 +3129,6 @@ bool importTextLines() {
 
   if (!ok) {
     DEBUGLN(F("Ошибка импорта строк"));
-    SendWebError(MSG_TEXT_IMPORT_ERROR);
   } else {
     // Отправить в браузер уведомление, что файл создан - можно скачивать.
     DEBUGLN(F("Импорт строк выполнен"));
@@ -3137,8 +3136,6 @@ bool importTextLines() {
     // Пересканировать события с временнЫми отметками
     rescanTextEvents();
     // Сообщение клиенту о завершении операции
-    SendWebInfo(MSG_TEXT_IMPORT_OK);
-    SendWebKey("TXT", "IMPORT");
   }
 
   return ok;
@@ -3235,12 +3232,9 @@ bool exportTextLines() {
 
   if (!ok) {
     DEBUGLN(F("Ошибка экспорта' строк"));
-    SendWebError(MSG_TEXT_EXPORT_ERROR);
   } else {
     // Отправить в браузер уведомление, что файл создан - можно скачивать.
     DEBUGLN(F("Экспорт строк выполнен."));
-    SendWebInfo(MSG_TEXT_EXPORT_OK);
-    SendWebKey("TXT", "EXPORT");
   }
 
   return ok;

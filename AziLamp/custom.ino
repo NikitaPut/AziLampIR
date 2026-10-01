@@ -92,7 +92,6 @@ void doEffectWithOverlay(uint8_t aMode) {
       serializeJson(doc, out);    
       doc.clear();
       
-      SendWeb(out, TOPIC_TXT);
 
       #if (USE_MP3 == 1)
         // Если воспроизводился звук указанный для строки - остановить его
@@ -218,7 +217,6 @@ void doEffectWithOverlay(uint8_t aMode) {
     serializeJson(doc, out);    
     doc.clear();
     
-    SendWeb(out, TOPIC_TXT);
 
     // Если показ завершен и к отображению задана следующая строка - не нужно рисовать эффекты и все прочее - иначе экран мелькает
     // Завершить обработку - на следующем цикле будет выполнен показ следующей строки

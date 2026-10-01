@@ -874,46 +874,9 @@ String getDateTimeString(time_t t) {
 
 // ------------------------ Отправка значений в WEB ------------------------
 
-void notifyUnknownCommand(const String& text) {  
-  
-  String tmp(F("неизвестная команда '"));
-  tmp += text; tmp += '\'';    
-  SendWeb(tmp, TOPIC_ERR);
-}
-
-// Отправка в WEB канал - текущие значения переменных
-void SendCurrentState(String& keys) {
-
-  // Эта функция SendCurrentState() вызывается из одного места, после вызова стрка changed_keys, передаваемая сюда по адресу обнуляется
-  // Поэтому мы можем не создавать ноаве копии строки, а изменять ее каа нам нужно тут - все равно по вызоде из функции она будет обнклена
-  // Если строка начинается с '|' - удалить начальный '|'
-  // Если строка заканчивается с '|' - удалить последний '|'
-  if (keys.charAt(0) == '|') keys.setCharAt(0,' ');
-  if (keys.charAt(keys.length() - 1) == '|') keys.setCharAt(keys.length() - 1, ' ');
-  keys.trim();
-    
-  int16_t pos_start = 0;
-  int16_t pos_end = keys.indexOf('|', pos_start);
-  int16_t len = keys.length();
-  if (pos_end < 0) pos_end = len;
-
-  String key; key.reserve(6);
-  String s_tmp; s_tmp.reserve(OUT_CMD_SIZE);
-   
-  // Строка keys содержит ключи запрашиваемых данных, разделенных знаком '|', например "CE|CC|CO|CK|NC|SC|C1|DC|DD|DI|NP|NT|NZ|NS|DW|OF"
-  while (pos_start < len && pos_end >= pos_start) {
-    if (pos_end > pos_start) {      
-      key = keys.substring(pos_start, pos_end);
-      if (key.length() > 0) {
-        s_tmp = getStateValue(key, thisMode, true);
-        SendWebKey(key, s_tmp);
-      }      
-    }
-    yield();
-    pos_start = pos_end + 1;
-    pos_end = keys.indexOf('|', pos_start);
-    if (pos_end < 0) pos_end = len;
-  }
+void notifyUnknownCommand(const String& text) {
+  DEBUG(F("Неизвестная команда: "));
+  DEBUGLN(text);
 }
 
 String pinName(int8_t pin) {
@@ -970,7 +933,6 @@ void InitializeQueues() {
   isQueueInitialized = true;
   mem_prv = ESP.getFreeHeap();
 
-  changed_keys.reserve(90);
 
   for (uint8_t i = 0; i < QSIZE_IN; i++) {
     cmdQueue[i].reserve(IN_CMD_SIZE);

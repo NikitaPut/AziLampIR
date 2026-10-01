@@ -114,7 +114,6 @@ void process() {
       serializeJson(doc, out); 
       doc.clear();
 
-      SendWeb(out, TOPIC_E131);
       FastLED.clear();
     }
     
@@ -152,7 +151,6 @@ void process() {
       serializeJson(doc, out);      
       doc.clear();
 
-      SendWeb(out, TOPIC_E131);
     }
     e131_streaming = streaming;
   #endif
@@ -222,7 +220,6 @@ void process() {
             serializeJson(doc, out);      
             doc.clear();
             
-            SendWeb(out, TOPIC_WTR);
           }
         }
         
@@ -1523,7 +1520,6 @@ void parsing() {
             FastLEDshow();
             
             // Строка подтверждения приема строки изображения              
-            SendWebKey("L", String(pntY));
 
             break;
 
@@ -1566,7 +1562,6 @@ void parsing() {
             FastLEDshow();
 
             // Строка подтверждения приема строки изображения              
-            SendWebKey("C", String(pntX));
             break;
 
           case 14:
@@ -1586,10 +1581,8 @@ void parsing() {
             // Отправка уведомления или сообщения об ошибке в Web канал
             if (str.length() == 0) {
               // Файл загружен
-              SendWebInfo(MSG_FILE_LOADED);
             } else {
               // Ошибка загрузки файла
-              SendWebError(str);
             }
             break;
 
@@ -1605,10 +1598,8 @@ void parsing() {
             // Отправка уведомления или сообщения об ошибке в Web канал
             if (str.length() == 0) {
               // Файл сохранен
-              SendWebInfo(MSG_FILE_SAVED);
             } else {
               // Ошибка сохранения файла
-              SendWebError(str);
             }
             break;
 
@@ -1625,10 +1616,8 @@ void parsing() {
             // При успешно завершившейся операции возвращается пустая строка
             if (str.length() == 0) {
               // Файл удален
-              SendWebInfo(MSG_FILE_DELETED);
             } else {
               // Ошибка удаления файла
-              SendWebError(str);
             }
             break;
 
@@ -1857,13 +1846,11 @@ void parsing() {
 
         // Сначала отправляем параметр для редактирования param2...
         if (out.indexOf("\"param2\":null") != -1) {
-          SendWebKey("EDIT", param2);
         }
                 
         // затем отправляем структуру с остальными параметрами редактирования
         // к тому моменту когда клиент получит структуру - недостающий параметр уже будет готов
         // для формирования значений в окне данных
-        SendWeb(out, TOPIC_EDT);
         
       } else
 
@@ -1919,7 +1906,6 @@ void parsing() {
            set_SYNC_WEATHER_PERIOD(intData[2]);
            set_regionID(intData[3]);
            set_regionID2(intData[4]);
-           SendWebInfo(MSG_OP_SUCCESS);
            break;
          case 6:               // $12 6 X; - Использовать отображение температуры цветом 0 - нет; 1 - да
            set_useTemperatureColorNight(intData[2] == 1);
@@ -1977,7 +1963,6 @@ void parsing() {
          #endif  
          case 9:               // $13 9 D; - Периодичность отображения бегущей строки (в секундах D)
            set_TEXT_INTERVAL(intData[2]);
-           SendWebInfo(MSG_OP_SUCCESS);
            break;
          case 11:               // $13 11 X; - Режим цвета бегущей строкой X: 0,1,2,           
            set_COLOR_TEXT_MODE(intData[2]);
@@ -1989,7 +1974,6 @@ void parsing() {
          case 15:               // $13 15 00FFAA;
            // В строке цвет - "$13 15 00FFAA;" - цвет часов текстовой строкой для режима "монохромный", сохраняемый в globalTextColor
            set_globalTextColor((uint32_t)HEXtoInt(incomeBuffer.substring(7,13)));
-           SendWebInfo(MSG_OP_SUCCESS);
            break;
          case 16:               // $13 16; - имортировать файл со строками
            importTextLines();
@@ -2094,7 +2078,6 @@ void parsing() {
         autoplayTimer = millis();
       }
       setIdleTimer();             
-      SendWebInfo(MSG_OP_SUCCESS);
       break;
 
     // ----------------------------------------------------
@@ -2204,7 +2187,6 @@ void parsing() {
            // Выполнить перерасчет времени будильников и ожидателей времени наступления события в макросах бегущей строки
            // Если идет вещание на клиентов - передать текущее (полученное) время клиентам
            setCurrentTime((uint8_t)intData[5],(uint8_t)intData[6],0,(uint8_t)intData[4],(uint8_t)intData[3],(uint16_t)intData[2]);
-           SendWebInfo(MSG_OP_SUCCESS);
            break;
          case 9:               
            // $19 9 X Y;  - Флаги отображения часов/календаря в циклах T1-T4  часы - младшие 4 бита, календарь - старшие 4 бита
@@ -2247,7 +2229,6 @@ void parsing() {
          case 17:               // $19 17 T1 T2; - Продолжительность отображения даты / часов (в секундах)
            set_clockCycleT1(intData[2]);
            set_clockCycleT2(intData[3]);
-           SendWebInfo(MSG_OP_SUCCESS);
            break;
          case 18:               //   $19 18 X; - Флаг скрывать при бегущей строке b0 - часы  b1 - календарь  b2 - температуру
            set_hideOnTextRunning(intData[2]);
@@ -2427,7 +2408,6 @@ void parsing() {
               DEBUGLN(F("Точка доступа отключена."));
             }
           }      
-          SendWebInfo(MSG_OP_SUCCESS);
           break;
         case 1:  
           // $21 1 IP1 IP2 IP3 IP4 - установить статический IP адрес подключения к локальной WiFi сети, пример: $21 1 192 168 0 106
@@ -2488,7 +2468,6 @@ void parsing() {
       saveSettings();
       
       
-      SendWebInfo(MSG_OP_SUCCESS);
       break;
 
     // ----------------------------------------------------
@@ -2555,9 +2534,7 @@ void parsing() {
         case 1:
           err = !saveEepromToFile(intData[2] == 1 ? F("SD") : F("FS"));
           if (err) {
-            SendWebError(MSG_BACKUP_SAVE_ERROR);
           } else {
-            SendWebInfo(MSG_BACKUP_SAVE_OK);
           }
           addKeyToChanged("EE");
           needSendAck = false;
@@ -2565,9 +2542,7 @@ void parsing() {
         case 2:
           err = !loadEepromFromFile(intData[2] == 1 ? F("SD") : F("FS"));
           if (err) {
-            SendWebError(MSG_BACKUP_LOAD_ERROR);
           } else {
-            SendWebInfo(MSG_BACKUP_LOAD_OK);
           }
           needSendAck = false;
           // Если настройки загружены без ошибок - перезагрузить устройство
@@ -2723,7 +2698,6 @@ void parsing() {
 
       if (needSendAck) {
          
-         SendWebInfo(MSG_OP_SUCCESS);
       }
       break;
     }
@@ -5444,7 +5418,6 @@ void sendImageLine(uint8_t typ, uint8_t idx) {
     }
     imageLine.trim();
     imageLine.replace(" ", ",");    
-    SendWebKey(sCmd, imageLine);
   }  
 }
 

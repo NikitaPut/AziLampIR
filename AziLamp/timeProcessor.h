@@ -1,11 +1,5 @@
 #pragma once
-#ifdef ESP32
-#include <WiFi.h>
-#endif
-
-#ifdef ESP8266
-#include <ESP8266WiFi.h>
-#endif
+// WiFi/NTP синхронизация времени удалена из проекта (работа только от сенсорной кнопки и ИК-пульта).
 
 
 /*
